@@ -13,6 +13,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.gayratrakhimov.altimeter.R;
 import com.gayratrakhimov.altimeter.models.CalibrationUnit;
@@ -158,11 +159,6 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     }
 
     @Override
-    public void setAvgAltitude(String info) {
-
-    }
-
-    @Override
     public void setMaxAltitude(String info) {
         maxAltitude.setText(info);
     }
@@ -288,6 +284,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
     @Override
     public void showCalibrateAltitudeDialog(final CalibrationUnit calibrationUnit, String title, final int value, int maxValue) {
+
         final MaterialNumberPicker numberPicker = new MaterialNumberPicker.Builder(this)
                 .minValue(0)
                 .maxValue(maxValue)
@@ -317,4 +314,10 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
                 })
                 .show();
     }
+
+    @Override
+    public void showToast(String toast) {
+        Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_LONG).show();
+    }
+
 }

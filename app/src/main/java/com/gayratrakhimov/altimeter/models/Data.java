@@ -31,4 +31,5 @@ public class Data {
     public void setMillibar(double millibar) {
         this.millibar = millibar;
     }
+
 }

@@ -31,28 +31,38 @@ import java.util.ArrayList;
  */
 public class MainPresenter {
 
-    double calibrationRatio = 1.0;
-
     Context context;
     Activity activity;
     MainView mainView;
 
+    // main variable
+    // air pressure is saved in millibars
     double millibars;
 
-    boolean trackingStarted = true;
+    // calibration ration for air pressure in millibars
+    // alt2>alt1, calibrationRatio<1
+    // alt2<alt1, calibrationRatio>1
+    double calibrationRatio = 1.0;
 
-    int changeCount = 0;
-
+    // when millibars is min, altitude is max
     double minMillibarsWithoutCalibration = 1000d;
+    // when millibars is max, altitude is min
     double maxMillibarsWithoutCalibration = 0d;
 
+    // if true - draw graph, else stop drawing graph
+    boolean trackingStarted = true;
+    int changeCount = 0;
+
+    // all data (timestamp, millibar) saved in array
     ArrayList<Data> history = new ArrayList<>();
+    // entries for drawing graph
     ArrayList<Entry> entries = new ArrayList<Entry>();
 
     public MainPresenter(Context context, Activity activity, MainView mainView) {
         this.context = context;
         this.activity = activity;
         this.mainView = mainView;
+        // get saved calibration ratio
         calibrationRatio = SP.getSharedPreferenceDouble(context, SP.CALIBRATION_RATIO, 1);
     }
 
@@ -60,12 +70,14 @@ public class MainPresenter {
         initPressureListener();
     }
 
+    // register air pressure listener
     private void initPressureListener() {
         SensorManager manager = (SensorManager) context.getSystemService(Service.SENSOR_SERVICE);
         Sensor sensor = manager.getDefaultSensor(Sensor.TYPE_PRESSURE);
         manager.registerListener(pressureListener, sensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
+    // this listener catches changes in barometer value
     SensorEventListener pressureListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
@@ -82,44 +94,54 @@ public class MainPresenter {
         }
     };
 
+    // update UI
     private void updateInfo() {
 
+        // calibrated millibars
         double millibarsCalibrated = millibars * calibrationRatio;
 
+        // when millibar is min, altitude is max
         if (millibars < minMillibarsWithoutCalibration) {
+            // set min millibar
             minMillibarsWithoutCalibration = millibars;
+            // show max altitude
             double altitudeInMeters = Converter.mbToMeter(millibarsCalibrated);
             mainView.setMaxAltitude((int) Utils.round(altitudeInMeters, 0) + "m");
+            // set max limit for graph: altitude+5
             mainView.setMaxAxisValue((float) (Utils.round(altitudeInMeters, 0) + 5));
         }
 
+        // when millibar is max, altitude is min
         if (millibars > maxMillibarsWithoutCalibration) {
+            // set max millibar
             maxMillibarsWithoutCalibration = millibars;
+            // show min altitude
             double altitudeInMeters = Converter.mbToMeter(millibarsCalibrated);
             mainView.setMinAltitude((int) Utils.round(altitudeInMeters, 0) + "m");
+            // set min limit for graph: altitude-5
             mainView.setMinAxisValue((float) (Utils.round(altitudeInMeters, 0) - 5));
         }
 
-        // meters
+        // show altitude in METERS
         double altitudeInMeters = Converter.mbToMeter(millibarsCalibrated);
         String altitudeInMetersText = (int) Utils.round(altitudeInMeters, 0) + " m";
         mainView.setAltitude(altitudeInMetersText);
 
-        // feet
+        // show altitude in FEET
         double altitudeInFeet = Converter.mbToFt(millibarsCalibrated);
         String altitudeInFeetText = (int) Utils.round(altitudeInFeet, 0) + " ft";
         mainView.setAlternativeAltitude(altitudeInFeetText);
 
-        // mbar
+        // show MILLIBARS
         String millibarsText = (int) Utils.round(millibarsCalibrated, 0) + " mbar";
         mainView.setMillibars(millibarsText);
 
-        // kPa
+        // show KILOPASCALS
         double kilopascals = Converter.mbToKpa(millibarsCalibrated);
         String kilopascalsText = (int) Utils.round(kilopascals, 0) + " kPa";
         mainView.setKilopascals(kilopascalsText);
 
-
+        // add point to graph
         long timestamp = (System.currentTimeMillis() / 1000) % 86400;
         Data data = new Data(timestamp, millibars);
         history.add(data);
@@ -129,9 +151,11 @@ public class MainPresenter {
 
     private void addEntry(Data data) {
 
-        float altitudeInMeters = (float) Converter.mbToMeter(data.getMillibar()*calibrationRatio);
+        // calibrated altitude in meters
+        float altitudeInMeters = (float) Converter.mbToMeter(data.getMillibar() * calibrationRatio);
         entries.add(new Entry(entries.size(), altitudeInMeters));
 
+        // if graph is new, create it
         LineDataSet set1 = mainView.getChartDataSet();
         if (set1 != null) {
             set1.setValues(entries);
@@ -155,59 +179,80 @@ public class MainPresenter {
             // create a data object with the datasets
             LineData lineData = new LineData(dataSets);
 
-            // set data]
+            // set data
             mainView.setChartData(lineData);
         }
     }
 
+    // menu item clicked
     public void onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.start:
                 trackingStarted = !trackingStarted;
-                if (trackingStarted) item.setIcon(R.drawable.ic_pause_circle_filled_white_24dp);
-                else item.setIcon(R.drawable.ic_play_circle_filled_white_24dp);
+                if (trackingStarted) {//resume
+                    item.setIcon(R.drawable.ic_pause_circle_filled_white_24dp);
+                    mainView.showToast(context.getString(R.string.graph_animation_resumed));
+                } else {//pause
+                    item.setIcon(R.drawable.ic_play_circle_filled_white_24dp);
+                    mainView.showToast(context.getString(R.string.graph_animation_paused));
+                }
                 break;
         }
     }
 
+    // all view clicks comes here
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.altitudeMeters:
-                double altitudeInMeters = Converter.mbToMeter(millibars*calibrationRatio);
+            case R.id.altitudeMeters://show calibration in meters
+                double altitudeInMeters = Converter.mbToMeter(millibars * calibrationRatio);
                 showCalibrateDialog(CalibrationUnit.METER, (int) Utils.round(altitudeInMeters, 0));
                 break;
-            case R.id.altitudeFeet:
-                double altitudeInFeet = Converter.mbToFt(millibars*calibrationRatio);
+            case R.id.altitudeFeet://show calibration in feet
+                double altitudeInFeet = Converter.mbToFt(millibars * calibrationRatio);
                 showCalibrateDialog(CalibrationUnit.FOOT, (int) Utils.round(altitudeInFeet, 0));
                 break;
         }
     }
 
+    // calibrated
     public void onCalibrateOkButton(CalibrationUnit calibrationUnit, int altitude) {
 
+        // identify ratio
         if (calibrationUnit == CalibrationUnit.METER) {
             double calibratedMillibars = Converter.metersToMb(altitude);
-            calibrationRatio = calibratedMillibars/millibars;
+            calibrationRatio = calibratedMillibars / millibars;
         } else if (calibrationUnit == CalibrationUnit.FOOT) {
             double calibratedMillibars = Converter.ftToMb(altitude);
-            calibrationRatio = calibratedMillibars/millibars;
+            calibrationRatio = calibratedMillibars / millibars;
         }
 
-        minMillibarsWithoutCalibration = 1000d;
-        maxMillibarsWithoutCalibration = 0d;
+        // save ration
+        SP.setSharedPreferenceDouble(context, SP.CALIBRATION_RATIO, calibrationRatio);
+
+        // re-enter calibrated values
         entries = new ArrayList<>();
-        for(Data data: history){
+        for (Data data : history) {
             addEntry(data);
         }
+
+        // update max calibrated altitude
+        double maxAltitudeInMeters = Converter.mbToMeter(minMillibarsWithoutCalibration*calibrationRatio);
+        mainView.setMaxAltitude((int) Utils.round(maxAltitudeInMeters, 0) + "m");
+        mainView.setMaxAxisValue((float) (Utils.round(maxAltitudeInMeters, 0) + 5));
+
+        // update min calibrated altitude
+        double minAltitudeInMeters = Converter.mbToMeter(maxMillibarsWithoutCalibration*calibrationRatio);
+        mainView.setMinAltitude((int) Utils.round(minAltitudeInMeters, 0) + "m");
+        mainView.setMinAxisValue((float) (Utils.round(minAltitudeInMeters, 0) - 5));
 
     }
 
     private void showCalibrateDialog(CalibrationUnit calibrationUnit, int value) {
 
-        String title = "Calibrate(in meters)";
+        String title = context.getString(R.string.calibrate_meters);
         int maxValue = (int) Const.TROPOSPHERE_ALTITUDE_IN_METERS;
         if (calibrationUnit == CalibrationUnit.FOOT) {
-            title = "Calibrate(in feet)";
+            title = context.getString(R.string.calibrate_feet);
             maxValue = (int) Const.TROPOSPHERE_ALTITUDE_IN_FEET;
         }
         mainView.showCalibrateAltitudeDialog(calibrationUnit, title, value, maxValue);

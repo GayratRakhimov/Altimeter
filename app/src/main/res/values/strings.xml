@@ -4,4 +4,8 @@
     <string name="action_settings">Settings</string>
     <string name="section_format">Hello World from section: %1$d</string>
     <string name="title_activity_calibrate">CalibrateActivity</string>
+    <string name="graph_animation_resumed">Graph animation resumed</string>
+    <string name="graph_animation_paused">Graph animation paused</string>
+    <string name="calibrate_meters">Calibrate(meters)</string>
+    <string name="calibrate_feet">Calibrate(feet)</string>
 </resources>

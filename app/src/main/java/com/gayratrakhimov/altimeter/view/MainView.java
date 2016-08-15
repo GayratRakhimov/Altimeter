@@ -11,7 +11,6 @@ import com.github.mikephil.charting.data.LineDataSet;
 public interface MainView {
 
     void setMinAltitude(String info);
-    void setAvgAltitude(String info);
     void setMaxAltitude(String info);
     void setAltitude(String info);
     void setAlternativeAltitude(String info);
@@ -23,5 +22,6 @@ public interface MainView {
     void setMinAxisValue(float minAxisValue);
     void setMaxAxisValue(float maxAxisValue);
     void showCalibrateAltitudeDialog(CalibrationUnit calibrationUnit, String title, int value, int maxValue);
+    void showToast(String toast);
 
 }
