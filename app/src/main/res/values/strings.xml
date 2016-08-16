@@ -8,4 +8,7 @@
     <string name="graph_animation_paused">Graph animation paused</string>
     <string name="calibrate_meters">Calibrate(meters)</string>
     <string name="calibrate_feet">Calibrate(feet)</string>
+    <string name="default_calibration_was_set">Device\'s default calibration was set</string>
+    <string name="barometer_sensor_required">Barometer sensor required</string>
+    <string name="your_device_does_not_support_barometer_sensor">Sorry! Your device does not support barometer sensor.</string>
 </resources>

@@ -35,6 +35,8 @@ public class MainPresenter {
     Activity activity;
     MainView mainView;
 
+    boolean accelerometerAvailable;
+
     // main variable
     // air pressure is saved in millibars
     double millibars;
@@ -74,19 +76,22 @@ public class MainPresenter {
     private void initPressureListener() {
         SensorManager manager = (SensorManager) context.getSystemService(Service.SENSOR_SERVICE);
         Sensor sensor = manager.getDefaultSensor(Sensor.TYPE_PRESSURE);
-        manager.registerListener(pressureListener, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        accelerometerAvailable = manager.registerListener(pressureListener, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        if(!accelerometerAvailable) mainView.showAlertDialog(context.getString(R.string.barometer_sensor_required), context.getString(R.string.your_device_does_not_support_barometer_sensor));
     }
 
     // this listener catches changes in barometer value
     SensorEventListener pressureListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
-            float[] values = sensorEvent.values;
-            millibars = values[0];
-            if (trackingStarted && changeCount % 5 == 0) {
-                updateInfo();
+            if(accelerometerAvailable){
+                float[] values = sensorEvent.values;
+                millibars = values[0];
+                if (trackingStarted && changeCount % 5 == 0) {
+                    updateInfo();
+                }
+                changeCount++;
             }
-            changeCount++;
         }
 
         @Override
@@ -104,9 +109,12 @@ public class MainPresenter {
         if (millibars < minMillibarsWithoutCalibration) {
             // set min millibar
             minMillibarsWithoutCalibration = millibars;
-            // show max altitude
+            // show max altitude in meters
             double altitudeInMeters = Converter.mbToMeter(millibarsCalibrated);
-            mainView.setMaxAltitude((int) Utils.round(altitudeInMeters, 0) + "m");
+            mainView.setMaxAltitude((int) Utils.round(altitudeInMeters, 0) + " m");
+            // show max altitude in feet
+            double altitudeInFeet = Converter.mbToFt(millibarsCalibrated);
+            mainView.setMaxAltitudeFeet((int) Utils.round(altitudeInFeet, 0) + " ft");
             // set max limit for graph: altitude+5
             mainView.setMaxAxisValue((float) (Utils.round(altitudeInMeters, 0) + 5));
         }
@@ -115,9 +123,12 @@ public class MainPresenter {
         if (millibars > maxMillibarsWithoutCalibration) {
             // set max millibar
             maxMillibarsWithoutCalibration = millibars;
-            // show min altitude
+            // show min altitude in meters
             double altitudeInMeters = Converter.mbToMeter(millibarsCalibrated);
-            mainView.setMinAltitude((int) Utils.round(altitudeInMeters, 0) + "m");
+            mainView.setMinAltitude((int) Utils.round(altitudeInMeters, 0) + " m");
+            //show min altitued in feet
+            double altitudeInFeet = Converter.mbToFt(millibarsCalibrated);
+            mainView.setMinAltitudeFeet((int) Utils.round(altitudeInFeet, 0) + " ft");
             // set min limit for graph: altitude-5
             mainView.setMinAxisValue((float) (Utils.round(altitudeInMeters, 0) - 5));
         }
@@ -211,6 +222,12 @@ public class MainPresenter {
                 double altitudeInFeet = Converter.mbToFt(millibars * calibrationRatio);
                 showCalibrateDialog(CalibrationUnit.FOOT, (int) Utils.round(altitudeInFeet, 0));
                 break;
+            case R.id.default_calibration:
+                calibrationRatio = 1.0d;
+                mainView.showToast(context.getString(R.string.default_calibration_was_set));
+                SP.setSharedPreferenceDouble(context, SP.CALIBRATION_RATIO, calibrationRatio);
+                onCalibrationChanged();
+                break;
         }
     }
 
@@ -226,6 +243,11 @@ public class MainPresenter {
             calibrationRatio = calibratedMillibars / millibars;
         }
 
+        onCalibrationChanged();
+
+    }
+
+    private void onCalibrationChanged() {
         // save ration
         SP.setSharedPreferenceDouble(context, SP.CALIBRATION_RATIO, calibrationRatio);
 
@@ -237,14 +259,17 @@ public class MainPresenter {
 
         // update max calibrated altitude
         double maxAltitudeInMeters = Converter.mbToMeter(minMillibarsWithoutCalibration*calibrationRatio);
-        mainView.setMaxAltitude((int) Utils.round(maxAltitudeInMeters, 0) + "m");
+        mainView.setMaxAltitude((int) Utils.round(maxAltitudeInMeters, 0) + " m");
+        double maxAltitudeInFeet = Converter.mbToFt(minMillibarsWithoutCalibration*calibrationRatio);
+        mainView.setMaxAltitudeFeet((int) Utils.round(maxAltitudeInFeet, 0) + " ft");
         mainView.setMaxAxisValue((float) (Utils.round(maxAltitudeInMeters, 0) + 5));
 
         // update min calibrated altitude
         double minAltitudeInMeters = Converter.mbToMeter(maxMillibarsWithoutCalibration*calibrationRatio);
-        mainView.setMinAltitude((int) Utils.round(minAltitudeInMeters, 0) + "m");
+        mainView.setMinAltitude((int) Utils.round(minAltitudeInMeters, 0) + " m");
+        double minAltitudeInFeet = Converter.mbToFt(minMillibarsWithoutCalibration*calibrationRatio);
+        mainView.setMinAltitudeFeet((int) Utils.round(minAltitudeInFeet, 0) + " ft");
         mainView.setMinAxisValue((float) (Utils.round(minAltitudeInMeters, 0) - 5));
-
     }
 
     private void showCalibrateDialog(CalibrationUnit calibrationUnit, int value) {

@@ -3,6 +3,7 @@ package com.gayratrakhimov.altimeter.activity;
 
 import android.content.DialogInterface;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -12,6 +13,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,9 +50,12 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     TextView kilopascals;
     TextView altitude;
     TextView minAltitude;
+    TextView minAltitudeFeet;
     TextView maxAltitude;
+    TextView maxAltitudeFeet;
     CardView altitudeMeters;
     CardView altitudeFeet;
+    Button defaultCalibration;
 
     LineChart chart;
 
@@ -57,16 +64,30 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            // clear FLAG_TRANSLUCENT_STATUS flag:
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            // add FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS flag to the window
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            // finally change the color
+            window.setStatusBarColor(getResources().getColor(R.color.colorPrimary));
+        }
+
         altitude = (TextView) findViewById(R.id.altitude);
         alternativeAltitude = (TextView) findViewById(R.id.alternative_altitude);
         millibars = (TextView) findViewById(R.id.millibars);
         kilopascals = (TextView) findViewById(R.id.kilopascals);
         minAltitude = (TextView) findViewById(R.id.minAltitude);
+        minAltitudeFeet = (TextView) findViewById(R.id.minAltitudeFeet);
         maxAltitude = (TextView) findViewById(R.id.maxAltitude);
+        maxAltitudeFeet = (TextView) findViewById(R.id.maxAltitudeFeet);
         altitudeMeters = (CardView) findViewById(R.id.altitudeMeters);
         altitudeMeters.setOnClickListener(this);
         altitudeFeet = (CardView) findViewById(R.id.altitudeFeet);
         altitudeFeet.setOnClickListener(this);
+        defaultCalibration = (Button) findViewById(R.id.default_calibration);
+        defaultCalibration.setOnClickListener(this);
 
         setupChart();
 
@@ -120,7 +141,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
             @Override
             public String getFormattedValue(float value, AxisBase axis) {
                 long timestamp = (long) value;
-                Date date = new Date(timestamp*1000);
+                Date date = new Date(timestamp * 1000);
                 SimpleDateFormat sdf = new SimpleDateFormat("ss");
                 return String.valueOf(sdf.format(date));
             }
@@ -159,8 +180,18 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     }
 
     @Override
+    public void setMinAltitudeFeet(String info) {
+        minAltitudeFeet.setText(info);
+    }
+
+    @Override
     public void setMaxAltitude(String info) {
         maxAltitude.setText(info);
+    }
+
+    @Override
+    public void setMaxAltitudeFeet(String info) {
+        maxAltitudeFeet.setText(info);
     }
 
     @Override
@@ -222,7 +253,8 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
     @Override
     public LineDataSet getChartDataSet() {
-        if(chart.getData() != null && chart.getData().getDataSetCount() > 0) return (LineDataSet) chart.getData().getDataSetByIndex(0);
+        if (chart.getData() != null && chart.getData().getDataSetCount() > 0)
+            return (LineDataSet) chart.getData().getDataSetByIndex(0);
         return null;
     }
 
@@ -236,7 +268,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         Log.i("Gesture", "END, lastGesture: " + lastPerformedGesture);
 
         // un-highlight values after the gesture is finished and no single-tap
-        if(lastPerformedGesture != ChartTouchListener.ChartGesture.SINGLE_TAP)
+        if (lastPerformedGesture != ChartTouchListener.ChartGesture.SINGLE_TAP)
             chart.highlightValues(null); // or highlightTouch(null) for callback to onNothingSelected(...)
     }
 
@@ -320,4 +352,17 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_LONG).show();
     }
 
+    @Override
+    public void showAlertDialog(String title, String message) {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        alertDialogBuilder.setTitle(title);
+        alertDialogBuilder.setMessage(message);
+        alertDialogBuilder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                finish();
+            }
+        });
+        alertDialogBuilder.show();
+    }
 }
